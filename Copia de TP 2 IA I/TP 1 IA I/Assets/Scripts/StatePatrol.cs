@@ -8,24 +8,20 @@ public class StatePatrol : NPCState
     private float _speed;
     private Animator _anim;
     private List<Node> _waypoints;
-    int _currentWaypoint = 0;
-    int _indexModifier = 1;
+    int _currentWaypoint;
+    int _indexModifier;
     int _patrolCount;
 
-    public StatePatrol(FSM fsm, NPC owner, float speed, List<Node> waypoints) : base(fsm, owner)
-    {
-        _waypoints = waypoints;
-        _speed = speed;
-        _anim = owner.GetComponent<Animator>();
-        EventsManager.SubscribeToEvent("OnReachEndPath", OnReachEndPath);
-        EventsManager.SubscribeToEvent("ResetLevel", OnResetLevel);
-    }
-
-    private void OnResetLevel(object[] parameterContainer)
+    public StatePatrol(FSM fsm, NPC owner, float speed, List<Node> waypoints, string message = null) : base(fsm, owner)
     {
         _currentWaypoint = 0;
         _indexModifier = 1;
         _patrolCount = 0;
+        _waypoints = waypoints;
+        _speed = speed;
+        _anim = owner.GetComponent<Animator>();
+        OnNotifyResetLevel(message);
+        EventsManager.SubscribeToEvent("OnReachEndPath", OnReachEndPath);
     }
 
     private void OnReachEndPath(object[] parameterContainer)
@@ -37,7 +33,7 @@ public class StatePatrol : NPCState
 
     public override void Awake()
     {
-        Debug.Log("START PATROL STATE...");
+        //Debug.Log("START PATROL STATE...");
     }
 
     public override void Execute()
@@ -60,7 +56,7 @@ public class StatePatrol : NPCState
 
     public override void Sleep()
     {
-        Debug.Log("END PATROL STATE...");
+        //Debug.Log("END PATROL STATE...");
     }
 
     public void Advance()
@@ -131,5 +127,15 @@ public class StatePatrol : NPCState
         }
         //print("DIRECTION AL OBJETIVO: " + DirToTarget);
 
+    }
+
+    public void OnNotifyResetLevel(string message)
+    {
+        if (message != null && message.Equals("ResetLevel"))
+        {
+            _currentWaypoint = 0;
+            _indexModifier = 1;
+            _patrolCount = 0;
+        }
     }
 }

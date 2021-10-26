@@ -1,7 +1,9 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
-public class DonePlayerHealth : MonoBehaviour
+public class DonePlayerHealth : MonoBehaviour, IResetLevelObservable, IAlarmNodeObservable
 {
     public float health = 100f;							// How much health the player has left.
 	public float resetAfterDeathTime = 5f;				// How much time from the player dying to the level reseting.
@@ -24,11 +26,19 @@ public class DonePlayerHealth : MonoBehaviour
 			return _instance;
 		}
 	}
-	
-	void Awake ()
+    protected List<IResetLevelObserver> _myObservers = new List<IResetLevelObserver>();
+    protected List<IAlarmNodeObserver> _myObserversAlarmNode = new List<IAlarmNodeObserver>();
+
+    void Awake ()
 	{
 		_instance = this;
-
+        var NPCs = FindObjectsOfType<NPC>();
+        NPCs.ToList().ForEach(x => 
+        {
+            AddObserverResetLevel(x);
+            AddObserverAlarmNode(x);
+        });
+       
 		// Setting up the references.
 		anim = GetComponent<Animator>();
 		playerMovement = GetComponent<DonePlayerMovement>();
@@ -97,7 +107,7 @@ public class DonePlayerHealth : MonoBehaviour
         if (timer >= resetAfterDeathTime) {
             // ... reset the level.
             sceneFadeInOut.EndScene();
-            EventsManager.TriggerEvent("ResetLevel");
+            Trigger("ResetLevel");
         }
 		
 	}
@@ -112,7 +122,49 @@ public class DonePlayerHealth : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.GetComponent<Node>() != null && other.gameObject.tag.Equals("Alarm")) {
-            EventsManager.TriggerEvent("OnAlarmNode", other.gameObject.GetComponent<Node>());
+            TriggerAlarmNode("AlarmNode", other.gameObject.GetComponent<Node>());
+        }
+    }
+
+    public void AddObserverResetLevel(IResetLevelObserver obs)
+    {
+        _myObservers.Add(obs);
+    }
+
+    public void RemoveObserverResetLevel(IResetLevelObserver obs)
+    {
+        if (_myObservers.Contains(obs))
+        {
+            _myObservers.Remove(obs);
+        }
+    }
+
+    public void Trigger(string message)
+    {
+        foreach (var observer in _myObservers)
+        {
+            observer.OnNotifyResetLevel(message);
+        }
+    }
+
+    public void AddObserverAlarmNode(IAlarmNodeObserver obs)
+    {
+        _myObserversAlarmNode.Add(obs);
+    }
+
+    public void RemoveObserverAlarmNode(IAlarmNodeObserver obs)
+    {
+        if (_myObserversAlarmNode.Contains(obs))
+        {
+            _myObserversAlarmNode.Remove(obs);
+        }
+    }
+
+    public void TriggerAlarmNode(string message, Node node)
+    {
+        foreach (var observer in _myObserversAlarmNode)
+        {
+            observer.OnNotifyAlarmNode(message, node);
         }
     }
 }

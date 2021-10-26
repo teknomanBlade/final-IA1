@@ -18,7 +18,11 @@ public class AStar : MonoBehaviour
     
     public List<Node> GetPath(Node initial, Node finalNode)
     {
-        foreach (var item in _nodesGenerator.grid)
+
+        _nodesGenerator.grid.ForEach(x => x.ClearNode());
+        _visited.ForEach(x => x.ClearNode());
+        _notVisited.ForEach(x => x.ClearNode());
+        /*foreach (var item in _nodesGenerator.grid)
         {
             item.ClearNode();
         }
@@ -31,7 +35,7 @@ public class AStar : MonoBehaviour
         foreach (var item in _notVisited)
         {
             item.ClearNode();
-        }
+        }*/
 
         _path.Clear();
         _visited.Clear();
@@ -135,7 +139,7 @@ public class AStar : MonoBehaviour
                 if (f >= deltaX)
                 {
                     Debug.Log("COORD X: " + (previousX + ((previous.x - 1) / 2)));
-                    Debug.Log("COORD Y: " + (previousY + ((previous.y - 1) / 2)));
+                    
                     if (_nodesGenerator.gridMatrix[getCoordX(previousX, previous.x), getCoordY(previousY, previous.y)])
                         return false;
 
@@ -149,6 +153,7 @@ public class AStar : MonoBehaviour
                     return false;
 
                 previousX = previousX + previous.x;
+                previous.x = previousX;
             }
         }
         else
@@ -158,6 +163,7 @@ public class AStar : MonoBehaviour
                 f = f + deltaX;
                 if (f >= deltaY)
                 {
+                    Debug.Log("COORD Y: " + (previousY + ((previous.y - 1) / 2)));
                     if (_nodesGenerator.gridMatrix[getCoordX(previousX, previous.x), getCoordY(previousY, previous.y)])
                         return false;
 
@@ -171,6 +177,7 @@ public class AStar : MonoBehaviour
                     return false;
 
                 previousY = previousY + previous.y;
+                previous.y = previousY;
             }
         }
 

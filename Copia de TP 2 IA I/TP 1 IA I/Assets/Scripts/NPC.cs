@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class NPC : MonoBehaviour
+public class NPC : MonoBehaviour, IAlertRobotObserver, IResetLevelObserver, IAlarmNodeObserver, ITargetHeardObserver
 {
     
     #region public Properties
@@ -28,6 +28,11 @@ public class NPC : MonoBehaviour
     FSM _mFSM;
     private List<Node> Path;
     private AStar _aStar;
+
+    public DoneLaserPlayerDetection doneLaserPlayerDetection { get; private set; }
+    public DoneCCTVPlayerDetection doneCCTVPlayerDetection { get; private set; }
+    public DonePlayerHealth donePlayerHealth { get; private set; }
+
     private QuestionNode _isIdleQuestion;
     private QuestionNode _playerInSightQuestion;
     private QuestionNode _playerHeardQuestion;
@@ -47,17 +52,21 @@ public class NPC : MonoBehaviour
     private PoolObject<BulletLaser> _bulletLaserPool;
     private int InitialStock;
     private BulletLaser prefabBulletLaser;
-    private bool IsAlertRun;
+    public bool IsAlertRun;
     private float Tick;
     private float FireRateBulletLaser;
     private StateAlert _stateAlert;
+    private string _message;
     #endregion
 
     // Start is called before the first frame update
     void Awake()
     {
-        _obstaclesBetween = false;
         IsAlertRun = false;
+        IsIdle = false;
+        _obstaclesBetween = false;
+        TargetInSight = false;
+        TargetHeard = false;
         FireRateBulletLaser = 1.5f;
         InitialStock = 10;
         SpeedRun = 50f;
@@ -66,10 +75,10 @@ public class NPC : MonoBehaviour
         AngleThreshold = 60f;
         _aStar = FindObjectOfType<AStar>();
         #region FiniteStateMachine
-            _mFSM = new FSM();
-            _stateAlert = new StateAlert(_mFSM, this, SpeedRun, _aStar);
+        _mFSM = new FSM();
+            _stateAlert = new StateAlert(_mFSM, this, SpeedRun, _aStar, _message);
             _mFSM.AddState(new StateIdle(_mFSM, this));
-            _mFSM.AddState(new StatePatrol(_mFSM, this, SpeedWalk, waypoints));
+            _mFSM.AddState(new StatePatrol(_mFSM, this, SpeedWalk, waypoints, _message));
             _mFSM.AddState(new StateShoot(_mFSM, this, target));
             _mFSM.AddState(_stateAlert);
             _mFSM.AddState(new StateSoundAlert(_mFSM, this, target));
@@ -82,11 +91,7 @@ public class NPC : MonoBehaviour
 
         #region Events
             EventsManager.SubscribeToEvent("OnTwoPatrolIterations", OnTwoPatrolIterations);
-            EventsManager.SubscribeToEvent("OnAlertRobot", OnAlertRobot);
             EventsManager.SubscribeToEvent("OnTurnBackPath", OnTurnBackPath);
-            EventsManager.SubscribeToEvent("OnAlarmNode", OnAlarmNode);
-            EventsManager.SubscribeToEvent("OnPlayerOutOfHearingRange", OnPlayerOutOfHearingRange);
-            EventsManager.SubscribeToEvent("ResetLevel", OnResetLevel);
         #endregion
 
         #region DecisionTree
@@ -132,38 +137,10 @@ public class NPC : MonoBehaviour
         
     }
 
-    private void OnPlayerOutOfHearingRange(object[] parameterContainer)
-    { 
-        TargetHeard = false;
-    }
-
-    private void OnResetLevel(object[] parameterContainer)
-    {
-        IsIdle = false;
-        IsAlertRun = false;
-        TargetInSight = false;
-        _obstaclesBetween = false;
-        TargetHeard = false;
-    }
-
     private void OnTurnBackPath(object[] parameterContainer)
     {
         IsAlertRun = false;
     }
-
-    private void OnAlertRobot(object[] parameterContainer)
-    {
-        IsAlertRun = true;
-        IsIdle = false;
-    }
-
-    private void OnAlarmNode(object[] parameterContainer)
-    {
-        _finalNode = (Node)parameterContainer[0];
-        _stateAlert.SetInitialAndFinalNode(_initialNode, _finalNode);
-        //Debug.Log("INSTANCES COUNTER: " + NodesGenerator.Counter);
-    }
-
 
     private void OnTwoPatrolIterations(object[] parameterContainer)
     {
@@ -271,6 +248,53 @@ public class NPC : MonoBehaviour
         if (gameObject.name.Contains("North") && other.gameObject.GetComponent<Node>() != null && !other.gameObject.GetComponent<Node>().isBlocked)
         {
             _initialNode = other.gameObject.GetComponent<Node>();
+        }
+    }
+
+    public void OnNotifyAlertRobot(string message)
+    {
+        //Debug.Log("MESSAGE: " + message);
+        if (message.Equals("AlertRobot"))
+        {
+            //Debug.Log("ENTRA EN ALERT ROBOT");
+            IsAlertRun = true;
+            IsIdle = false;
+        }
+    }
+
+    public void OnNotifyResetLevel(string message)
+    {
+        _message = message;
+        if (message.Equals("ResetLevel"))
+        {
+            //Debug.Log("ENTRA EN RESET LEVEL");
+            IsIdle = false;
+            IsAlertRun = false;
+            TargetInSight = false;
+            _obstaclesBetween = false;
+            TargetHeard = false;
+        }
+    }
+
+    public void OnNotifyAlarmNode(string message, Node node)
+    {
+        if (message.Equals("AlarmNode"))
+        {
+            _finalNode = node;
+            _stateAlert.SetInitialAndFinalNode(_initialNode, _finalNode);
+        }
+        
+    }
+
+    public void OnNotifyTargetHeard(string message)
+    {
+        if (message.Equals("TargetHeard"))
+        {
+            TargetHeard = true;
+        }
+        else if (message.Equals("OutOfHearingRange"))
+        {
+            TargetHeard = false;
         }
     }
 }

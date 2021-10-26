@@ -1,7 +1,9 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
-public class DonePlayerMovement : MonoBehaviour
+public class DonePlayerMovement : MonoBehaviour, ITargetHeardObservable
 {
 	public AudioClip shoutingClip;		// Audio clip of the player shouting.
 	public float turnSmoothing = 15f;	// A smoothing value for turning the player.
@@ -10,12 +12,17 @@ public class DonePlayerMovement : MonoBehaviour
     private bool shout;
     private bool footsteps;
 	private Animator anim;				// Reference to the animator component.
-	private DoneHashIDs hash;			// Reference to the HashIDs.
-	
-	
-	void Awake ()
+	private DoneHashIDs hash;           // Reference to the HashIDs.
+    protected List<ITargetHeardObserver> _myObservers = new List<ITargetHeardObserver>();
+
+    void Awake ()
 	{
         footsteps = false;
+        var NPCs = FindObjectsOfType<NPC>();
+        NPCs.ToList().ForEach(x =>
+        {
+            AddObserverTargetHeard(x);
+        });
         // Setting up the references.
         anim = GetComponent<Animator>();
 		hash = GameObject.FindGameObjectWithTag(DoneTags.gameController).GetComponent<DoneHashIDs>();
@@ -120,24 +127,39 @@ public class DonePlayerMovement : MonoBehaviour
             Debug.Log("ENEMIES HEARD YOU: " + possibleEnemiesWhoHeardMe.Length);
             foreach (Collider enemy in possibleEnemiesWhoHeardMe)
             {
-                enemy.gameObject.GetComponent<NPC>().TargetHeard = true;
-                //EventsManager.TriggerEvent("OnPlayerHeard");
-
-                //Vector3 dir = transform.position - enemy.transform.position;
-                //enemy.transform.forward = dir;
+                TriggerTargetHeard("TargetHeard");
                 Debug.Log("EL ENEMIGO TE ESCUCHÓ??");
             }
 
         }
         else {
-            EventsManager.TriggerEvent("OnPlayerOutOfHearingRange");
+            TriggerTargetHeard("OutOfHearingRange");
         }
-        
-        
     }
 
     void OnDrawGizmos()
     {
         Gizmos.DrawWireSphere(transform.position, rangeSoundHearing);
+    }
+
+    public void AddObserverTargetHeard(ITargetHeardObserver obs)
+    {
+        _myObservers.Add(obs);
+    }
+
+    public void RemoveObserverTargetHeard(ITargetHeardObserver obs)
+    {
+        if (_myObservers.Contains(obs))
+        {
+            _myObservers.Remove(obs);
+        }
+    }
+
+    public void TriggerTargetHeard(string message)
+    {
+        foreach (var observer in _myObservers)
+        {
+            observer.OnNotifyTargetHeard(message);
+        }
     }
 }

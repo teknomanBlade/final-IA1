@@ -15,19 +15,13 @@ public class StateAlert : NPCState
     int _currentNode = 0;
     int _index = 1;
 
-    public StateAlert(FSM fsm, NPC owner, float speed, AStar aStar) : base(fsm, owner)
+    public StateAlert(FSM fsm, NPC owner, float speed, AStar aStar, string message = null) : base(fsm, owner)
     {
         _speed = speed;
         _anim = owner.GetComponent<Animator>();
         _aStar = aStar;
         _path = new List<Node>();
-        EventsManager.SubscribeToEvent("ResetLevel", OnResetLevel);
-    }
-
-    private void OnResetLevel(object[] parameterContainer)
-    {
-        _currentNode = 0;
-        _index = 1;
+        OnNotifyResetLevel(message);
     }
 
     public override void Awake()
@@ -121,45 +115,49 @@ public class StateAlert : NPCState
         _owner.AngleToTarget = Vector3.Angle(-_owner.transform.forward, _owner.DirToTarget);
         RaycastHit hit;
 
-            if (_owner.DistanceToTarget < _owner.DistanceThreshold && _owner.AngleToTarget < _owner.AngleThreshold)
-            {
-                Debug.DrawRay(_owner.head.transform.position, -_owner.DirToTarget, Color.red);
+        if (_owner.DistanceToTarget < _owner.DistanceThreshold && _owner.AngleToTarget < _owner.AngleThreshold)
+        {
+            Debug.DrawRay(_owner.head.transform.position, -_owner.DirToTarget, Color.red);
 
-                if (Physics.Raycast(_owner.head.transform.position, -_owner.DirToTarget, out hit, _owner.DistanceToTarget))
+            if (Physics.Raycast(_owner.head.transform.position, -_owner.DirToTarget, out hit, _owner.DistanceToTarget))
+            {
+            //Una vez que descartamos las primeras posibilidades, vamos a utilizar un raycast.            
+                if (hit.collider.gameObject.layer == Layers.PLAY_AREA)
                 {
-                //Una vez que descartamos las primeras posibilidades, vamos a utilizar un raycast.            
-                    if (hit.collider.gameObject.layer == Layers.PLAY_AREA)
-                    {
-                        _owner._obstaclesBetween = true;  //En caso de colisionar contra una pared, esto se vuelve verdadero.
-                    }
-                    else
-                    {
-                        _owner._obstaclesBetween = false;
-                    }
-                    //Debug.Log("OBSTACLES BETWEEN? " + obstaclesBetween);
-                    //Si el raycast no colisionó contra ningún objeto informamos que lo tiene en el rango de visión            
-                    if (_owner._obstaclesBetween)
-                    {
-                        _owner.TargetInSight = false;
-                    }
-                    else
-                    {
-                        _owner.TargetInSight = true;
-                        _anim.SetBool("PlayerInSight", _owner.TargetInSight);
-                   
-                    }
+                    _owner._obstaclesBetween = true;  //En caso de colisionar contra una pared, esto se vuelve verdadero.
+                }
+                else
+                {
+                    _owner._obstaclesBetween = false;
+                }
+                //Debug.Log("OBSTACLES BETWEEN? " + obstaclesBetween);
+                //Si el raycast no colisionó contra ningún objeto informamos que lo tiene en el rango de visión            
+                if (_owner._obstaclesBetween)
+                {
+                    _owner.TargetInSight = false;
+                }
+                else
+                {
+                    _owner.TargetInSight = true;
+                    _anim.SetBool("PlayerInSight", _owner.TargetInSight);
+               
                 }
             }
-            else
-            {
-                _owner._obstaclesBetween = false;
-                _owner.TargetInSight = false;
-                _anim.SetBool("PlayerInSight", _owner.TargetInSight);
-            }
-
-        
-        //print("DIRECTION AL OBJETIVO: " + DirToTarget);
-
+        }
+        else
+        {
+            _owner._obstaclesBetween = false;
+            _owner.TargetInSight = false;
+            _anim.SetBool("PlayerInSight", _owner.TargetInSight);
+        }
     }
 
+    public void OnNotifyResetLevel(string message)
+    {
+        if (message != null && message.Equals("ResetLevel"))
+        {
+            _currentNode = 0;
+            _index = 1;
+        }
+    }
 }

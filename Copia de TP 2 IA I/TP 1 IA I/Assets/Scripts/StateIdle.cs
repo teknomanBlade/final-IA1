@@ -29,6 +29,6 @@ public class StateIdle : NPCState
 
     public override void Sleep()
     {
-        Debug.Log("END IDLE STATE...");
+        //Debug.Log("END IDLE STATE...");
     }
 }

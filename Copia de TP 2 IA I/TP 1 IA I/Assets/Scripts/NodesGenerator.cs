@@ -13,7 +13,7 @@ public class NodesGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Awake()
     {
-        gridMatrix = new Node[11, 11];
+        gridMatrix = new Node[12, 12];
         var numRows = gridMatrix.GetLength(0);
         var numCols = gridMatrix.GetLength(1);
         //Debug.Log(numRows);
